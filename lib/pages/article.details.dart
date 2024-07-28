@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:share/share.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../model/ArticleModel.dart';
 import '../service/api_service.dart';
 
@@ -8,13 +10,30 @@ class ArticleDetailPage extends StatelessWidget {
 
   const ArticleDetailPage({required this.articleId, Key? key}) : super(key: key);
 
+  void _shareArticle(Article article) {
+    final String shareContent = '''
+${article.title}
+
+${article.content}
+
+Информация взята из приложения Prompt Psychology.
+[Link to the application]
+''';
+    Share.share(shareContent);
+  }
+
+  void _saveArticleId(int id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? savedArticles = prefs.getStringList('saved_articles') ?? [];
+    if (!savedArticles.contains(id.toString())) {
+      savedArticles.add(id.toString());
+      await prefs.setStringList('saved_articles', savedArticles);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Article Details'),
-        backgroundColor: Colors.lightBlue,
-      ),
       body: FutureBuilder<Article>(
         future: ApiService.fetchArticleById(articleId),
         builder: (context, snapshot) {
@@ -42,42 +61,143 @@ class ArticleDetailPage extends StatelessWidget {
             );
           } else if (snapshot.hasData) {
             final article = snapshot.data!;
-            return SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (article.image.isNotEmpty) ...[
-                      Container(
-                        height: 200.0,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15.0),
-                          image: DecorationImage(
-                            image: MemoryImage(base64Decode(article.image)),
-                            fit: BoxFit.cover,
-                          ),
+            return Stack(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      expandedHeight: 400.0,
+                      floating: false,
+                      pinned: true,
+                      backgroundColor: Colors.lightBlue,
+                      flexibleSpace: FlexibleSpaceBar(
+                        centerTitle: true,
+                        titlePadding: EdgeInsets.zero,
+                        title: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(flex: 3, child: Container()),
+                            Flexible(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                child: Text(
+                                  softWrap: true,
+                                  article.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.normal,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(0.3, 0.3),
+                                        blurRadius: 1,
+                                        color: Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            Flexible(flex: 1, child: Container()),
+                          ],
+                        ),
+                        background: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.memory(
+                              base64Decode(article.image),
+                              fit: BoxFit.cover,
+                            ),
+                            Container(
+                              color: Colors.black.withOpacity(0.5),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16.0),
-                    ],
-                    Text(
-                      article.title,
-                      style: const TextStyle(
-                        fontSize: 24.0,
-                        fontWeight: FontWeight.bold,
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
                       ),
                     ),
-                    const SizedBox(height: 16.0),
-                    Text(
-                      utf8.decode(article.content.codeUnits),
-                      style: const TextStyle(
-                        fontSize: 16.0,
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8.0,
+                                    vertical: 4.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
+                                  child: const Text(
+                                    'ИССКУСТВО',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16.0),
+                                Row(
+                                  children: const [
+                                    Icon(Icons.timer, size: 16.0, color: Colors.grey),
+                                    SizedBox(width: 4.0),
+                                    Text('4 мин.', style: TextStyle(color: Colors.grey)),
+                                    SizedBox(width: 16.0),
+                                    Icon(Icons.remove_red_eye, size: 16.0, color: Colors.grey),
+                                    SizedBox(width: 4.0),
+                                    Text('300', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
+                                const Spacer(),
+                                const Text('28.07.2024', style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 16.0),
+                            Text(
+                              utf8.decode(article.content.codeUnits),
+                              style: const TextStyle(
+                                fontSize: 16.0,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 16.0),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _shareArticle(article),
+                                icon: const Icon(Icons.share, color: Colors.lightBlue),
+                                label: const Text(
+                                  'Поделиться',
+                                  style: TextStyle(color: Colors.lightBlue),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  side: const BorderSide(color: Colors.lightBlue),
+                                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
+              ],
             );
           } else {
             return const Center(child: Text('No article details available'));
