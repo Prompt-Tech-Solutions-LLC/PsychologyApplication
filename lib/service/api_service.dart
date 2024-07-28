@@ -3,6 +3,8 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
+import '../model/ArticleModel.dart';
+
 class ApiService {
   static const String baseUrl = 'http://192.168.31.117:8080';
 
@@ -13,7 +15,7 @@ class ApiService {
       List<Article> articles = jsonResponse.map((article) => Article.fromJson(article)).toList();
 
       for (var article in articles) {
-        article.image = await fetchImage(article.mongoId);
+        article.image = await fetchImage(article.imageId);
       }
 
       return articles;
@@ -22,18 +24,8 @@ class ApiService {
     }
   }
 
-  static Future<String> fetchImage(String mongoId) async {
-    final response = await http.get(Uri.parse('$baseUrl/image/$mongoId'));
-
-    if (response.statusCode == 200) {
-      return response.body;
-    } else {
-      throw Exception('Failed to load image');
-    }
-  }
-
-  static Future<String> fetchArticleById(Long id) async {
-    final response = await http.get(Uri.parse('$baseUrl/articles/$id'));
+  static Future<String> fetchImage(String imageId) async {
+    final response = await http.get(Uri.parse('$baseUrl/image/$imageId'));
 
     if (response.statusCode == 200) {
       return response.body;
@@ -52,22 +44,17 @@ class ApiService {
     return await http.Response.fromStream(response);
   }
 
-}
+  static Future<Article> fetchArticleById(int id) async {
+    final response = await http.get(Uri.parse('$baseUrl/articles/$id'));
 
-class Article {
-  final int id;
-  final String title;
-  final String mongoId;
-  String image = '';
-  String description = '';
-
-  Article({required this.id, required this.title, required this.mongoId});
-
-  factory Article.fromJson(Map<String, dynamic> json) {
-    return Article(
-      id: json['id'],
-      title: utf8.decode(json['title'].toString().codeUnits),
-      mongoId: json['mongoId'],
-    );
+    if (response.statusCode == 200) {
+      var jsonResponse = json.decode(response.body);
+      Article article = Article.fromJson(jsonResponse);
+      article.image = await fetchImage(article.imageId);
+      article.content = jsonResponse['content'] ?? '';
+      return article;
+    } else {
+      throw Exception('Failed to load article');
+    }
   }
 }

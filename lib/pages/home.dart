@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:prompt_psychology/pages/article.add.dart';
 
+import '../model/ArticleModel.dart';
 import '../service/api_service.dart';
+import 'article.details.dart';
 import 'auth.login.dart';
 
 class HomePage extends StatefulWidget {
@@ -90,7 +92,8 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AddArticlePage()),
-                );              },
+                );
+              },
             ),
           ],
         ),
@@ -120,8 +123,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             );
-          }
-          else {
+          } else {
             return RefreshIndicator(
               onRefresh: _refreshArticles,
               child: SingleChildScrollView(
@@ -159,7 +161,12 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBigCard(Article article) {
     return GestureDetector(
       onTap: () {
-        // Navigate to article detail page with article.id
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailPage(articleId: article.id),
+          ),
+        );
       },
       child: Card(
         shape: RoundedRectangleBorder(
@@ -216,7 +223,12 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSmallCard(Article article) {
     return GestureDetector(
       onTap: () {
-        // Navigate to article detail page with article.id
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailPage(articleId: article.id),
+          ),
+        );
       },
       child: Card(
         shape: RoundedRectangleBorder(
